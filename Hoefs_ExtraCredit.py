@@ -8,6 +8,7 @@
 # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contour.html - matplotlib contour plot documentation
 
 
+from types import LambdaType
 import numpy as np
 from numpy import linalg
 import cvxopt
@@ -19,7 +20,7 @@ sns.set()
 import pylab as pl
 
 
-
+# returns k(x,y) = exp(-||x-y||^(2) / 2*sigma^2 )
 def gaussianKernelFunction(x, y, sigma):
     return np.exp(-linalg.norm(x-y)**2 / (2 * (sigma ** 2)))
 
@@ -67,12 +68,13 @@ def getParamsForCvxoptFunction(X,y,C,numOfSamples):
 
 # Finds the bias
 def findB(alphas,lambdas,supportVectors,supportVectorsY,kernelMatrix):
-    index =np.arange(len(lambdas))[supportVectors]
+    lambdaLen = len(lambdas)
+    index =np.arange(lambdaLen)[supportVectors]
     b = 0.0
     for i in range(len(alphas)):
         b += supportVectorsY[i]
         b -= np.sum(alphas * supportVectorsY * kernelMatrix[index[i],supportVectors])
-    b /= len(alphas)
+    b = b / len(alphas)
     return b
 
 # Plots the feature vectors
@@ -91,7 +93,7 @@ def plotSupportVectors(supportVectors):
     pl.xlabel('x1')
     pl.ylabel('x2')
 
-# Generates Z to be used with python's contour() plot function   
+# Finds the decision boundry and margin hyper planes to be used with python's contour() plot function   
 def generateMargin(alphas, X,supportVectorY,supportVectors,b):
     margin = np.zeros(len(X))
     for i in range(len(X)):
@@ -131,12 +133,23 @@ def findMisclassifications(X,alphas,supportVectorsY,supportVectors,b):
     return len(c1Miss) + len(c2Miss)
 # plot the decision boundry, and 2 margin hyperplanes
 def plotBoundaries(X,alphas,supportVectorsY,supportVectors,b):
+    # Create Mesh Grid for the contour plot
     X1, X2 = np.meshgrid(np.linspace(-3,10,60), np.linspace(-3,10,40)) 
-    X = np.array([[x1, x2] for x1, x2 in zip(np.ravel(X1), np.ravel(X2))]) # change to not use zip
+    x1 = np.ravel(X1)
+    x2 = np.ravel(X2)
+    i = 0
+    X_List = []
+    for i in range(len(x1)):
+        X_List.append((x1[i],x2[i]))
+    X = np.array(X_List)
+    # Find the decision boundry
     Margin = generateMargin(alphas,X,supportVectorsY,supportVectors,b)
     Margin = Margin.reshape(X1.shape)
+    # Find lower margin hyperplane
     Margin_lower = Margin - 1.0
+    # Find upper margin hyperplane
     Margin_upper = Margin + 1.0
+    # Plot decision boundry, and two margin hyper planes
     C1=pl.contour(X1, X2, Margin,[0], colors='k', linewidths=1, origin='lower')
     C2=pl.contour(X1, X2, Margin_upper, [0], colors='r', linewidths=1, origin='lower',linestyles='dashed')
     C3=pl.contour(X1, X2, Margin_lower, [0], colors='b', linewidths=1, origin='lower',linestyles='dashed')
@@ -149,8 +162,11 @@ def plotBoundaries(X,alphas,supportVectorsY,supportVectors,b):
     pl.axis("tight")
     return lines,labels
 
+#=================================== Start of Program =================================== 
+# Get the data from excel and put values into X,y
 X,y = getData()
 numOfSamples,numOfFeatures = X.shape
+# Set sigma for gaussian kernel
 sigma = 1.75
 
 #=================================== For C = 10 ===================================
@@ -180,9 +196,13 @@ b = findB(alphas,lambdas,supportVectorsBool,supportVectorsY,kernelMatrix)
 pl.figure(1,figsize=(10,5))
 print('b = ',b)
 print('Support Vectors: ', len(supportVectors))
+# Plot the feature vectors
 plotFeatureVectors(X,y)
+# Plot the support vectors
 plotSupportVectors(supportVectors)
+# Plot boundries
 lines,labels = plotBoundaries(X,alphas,supportVectorsY,supportVectors,b)
+# find and plot misclassified
 numMisclassified = findMisclassifications(X,alphas,supportVectorsY,supportVectors,b)
 pl.title('Gaussian Kernel: \n Sigma = 1.75\n Support Vectors = ' + str(len(supportVectors)) + '\nC=' + str(C) + '\nMisclassified= ' + str(numMisclassified))
 contourLegends = pl.legend(lines,labels)
