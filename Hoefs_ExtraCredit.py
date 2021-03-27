@@ -2,6 +2,7 @@
 # Extra Credit Assignment
 # Pattern Recognition Spring 2021
 # Environment: Visual Studio Code with Python 3.9.0
+# BEFORE RUNNING CHANGE FILE PATH ON LINE 29 TO POINT TO FILE ON YOUR SYSTEM!!!!
 # =============================== References ===============================
 # https://cvxopt.org/examples/tutorial/qp.html - Documentation on cvxopt python package
 # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contour.html - matplotlib contour plot documentation
@@ -11,7 +12,6 @@ import numpy as np
 from numpy import linalg
 import cvxopt
 import cvxopt.solvers
-from numpy.core.defchararray import array
 import pandas as pd
 from matplotlib import pyplot as pl
 import seaborn as sns
@@ -26,11 +26,11 @@ def gaussianKernelFunction(x, y, sigma):
 # Read data from excel dataset and split into X and y 
 # returns X,y containing data
 def getData():
-        df = pd.read_excel("C:\\Users\\hoefs\\PatternRecognition\\ExtraCreditv2\\ExtraCreditDataset.xlsx",sheet_name='Sheet1' ,engine='openpyxl',header = None)
-        numArray = df.to_numpy()
-        X = numArray[0:,0:2]
-        y = numArray[:, 2]
-        return X,y
+    df = pd.read_excel("C:\\Users\\hoefs\\PatternRecognition\\ExtraCreditv2\\ExtraCreditDataset.xlsx",sheet_name='Sheet1' ,engine='openpyxl',header = None)
+    numArray = df.to_numpy()
+    X = numArray[0:,0:2]
+    y = numArray[:, 2]
+    return X,y
 
 # Creates a Kernel Matrix of size (100,100) containing values based on the results of X data being passed into gaussian function
 # Returns the filled matrix
@@ -92,48 +92,54 @@ def plotSupportVectors(supportVectors):
     pl.ylabel('x2')
 
 # Generates Z to be used with python's contour() plot function   
-def generateZ(alphas, X,supportVectorY,supportVectors,b):
-    y_predict = np.zeros(len(X))
+def generateMargin(alphas, X,supportVectorY,supportVectors,b):
+    margin = np.zeros(len(X))
     for i in range(len(X)):
         s = 0
         for j in range(len(alphas)):
             s += alphas[j] * supportVectorY[j] *gaussianKernelFunction(X[i], supportVectors[j],1.75)
-        y_predict[i] = s
-    return y_predict + b
+        margin[i] = s
+    return margin + b
 
 # Finds and plots the misclassifications
+# Returns the total number of misclassifications in C1 and C2
 def findMisclassifications(X,alphas,supportVectorsY,supportVectors,b):
-    y_predict = np.zeros(len(X))
+    estimate = np.zeros(len(X))
     for i in range(len(X)):
         s = 0
         for j in range(len(alphas)):
             s += alphas[j] * supportVectorsY[j] *gaussianKernelFunction(X[i], supportVectors[j],1.75)
-        y_predict[i] = s + b
+        estimate[i] = s + b
     
-    c1y = y_predict[0:60]
-    c2y= y_predict[61:100]
+    # Get only class 1
+    c1y = estimate[0:60]
+    # Get only class 2
+    c2y= estimate[61:100]
+    # Find where C1 estimate value is less than 0 (Missclassified)
     c1Miss = np.argwhere(c1y < 0).flatten()
+    # Find where C2 estimate value is greater than 0 (Missclassified)
     c2Miss = (np.argwhere(c2y > 0) + 61).flatten()
     
+    # Get the values from the index's found above
     miss1Nums = X[c1Miss]
     miss2Nums = X[c2Miss]
     
+    # Plot the misclassified vectors with diamond marker
     pl.plot(miss1Nums[:,0],miss1Nums[:,1],'md',label='Misclassified', ms=15,fillstyle='none')
     pl.plot(miss2Nums[:,0],miss2Nums[:,1],'md',ms=15,fillstyle='none')
 
     return len(c1Miss) + len(c2Miss)
 # plot the decision boundry, and 2 margin hyperplanes
 def plotBoundaries(X,alphas,supportVectorsY,supportVectors,b):
-
-    X1, X2 = np.meshgrid(np.linspace(-3,10,100), np.linspace(-3,10,100)) 
-    X = np.array([[x1, x2] for x1, x2 in zip(np.ravel(X1), np.ravel(X2))])
-    Z = generateZ(alphas,X,supportVectorsY,supportVectors,b)
-    Z = Z.reshape(X1.shape)
-    Z_lower = Z - 1.0
-    Z_upper = Z + 1.0
-    C1=pl.contour(X1, X2, Z,[0], colors='k', linewidths=1, origin='lower')
-    C2=pl.contour(X1, X2, Z_upper, [0], colors='r', linewidths=1, origin='lower',linestyles='dashed')
-    C3=pl.contour(X1, X2, Z_lower, [0], colors='b', linewidths=1, origin='lower',linestyles='dashed')
+    X1, X2 = np.meshgrid(np.linspace(-3,10,60), np.linspace(-3,10,40)) 
+    X = np.array([[x1, x2] for x1, x2 in zip(np.ravel(X1), np.ravel(X2))]) # change to not use zip
+    Margin = generateMargin(alphas,X,supportVectorsY,supportVectors,b)
+    Margin = Margin.reshape(X1.shape)
+    Margin_lower = Margin - 1.0
+    Margin_upper = Margin + 1.0
+    C1=pl.contour(X1, X2, Margin,[0], colors='k', linewidths=1, origin='lower')
+    C2=pl.contour(X1, X2, Margin_upper, [0], colors='r', linewidths=1, origin='lower',linestyles='dashed')
+    C3=pl.contour(X1, X2, Margin_lower, [0], colors='b', linewidths=1, origin='lower',linestyles='dashed')
     lines = [ C1.collections[0], C2.collections[0], C3.collections[0]]
     labels = ['decision boundry','margin hyperplane','margin hyperplane']
     pl.xlabel('x1')
@@ -172,15 +178,13 @@ b = findB(alphas,lambdas,supportVectorsBool,supportVectorsY,kernelMatrix)
 
 
 pl.figure(1,figsize=(10,5))
-# pl.figure(figsize=(25,25))
-
 print('b = ',b)
 print('Support Vectors: ', len(supportVectors))
 plotFeatureVectors(X,y)
 plotSupportVectors(supportVectors)
 lines,labels = plotBoundaries(X,alphas,supportVectorsY,supportVectors,b)
 numMisclassified = findMisclassifications(X,alphas,supportVectorsY,supportVectors,b)
-pl.title('Gaussian Kernel: \n Support Vectors = ' + str(len(supportVectors)) + '\nC=' + str(C) + '\nMisclassified= ' + str(numMisclassified))
+pl.title('Gaussian Kernel: \n Sigma = 1.75\n Support Vectors = ' + str(len(supportVectors)) + '\nC=' + str(C) + '\nMisclassified= ' + str(numMisclassified))
 contourLegends = pl.legend(lines,labels)
 pl.legend(loc='lower right')
 pl.gca().add_artist(contourLegends)
@@ -211,11 +215,13 @@ b = findB(alphas,lambdas,supportVectorsBool,supportVectorsY,kernelMatrix)
 pl.figure(2,figsize=(10,5))
 print('b = ',b)
 print('Support Vectors: ', len(supportVectors))
+# Plot the feature vectors
 plotFeatureVectors(X,y)
+# Plot the support vectors
 plotSupportVectors(supportVectors)
 lines,labels = plotBoundaries(X,alphas,supportVectorsY,supportVectors,b)
 numMisclassified = findMisclassifications(X,alphas,supportVectorsY,supportVectors,b)
-pl.title('Gaussian Kernel: \n Support Vectors = ' + str(len(supportVectors)) + '\nC=' + str(C)+ '\nMisclassified= ' + str(numMisclassified))
+pl.title('Gaussian Kernel: \n Sigma = 1.75\n Support Vectors = ' + str(len(supportVectors)) + '\nC=' + str(C)+ '\nMisclassified= ' + str(numMisclassified))
 contourLegends = pl.legend(lines,labels)
 pl.legend(loc='lower right')
 pl.gca().add_artist(contourLegends)
