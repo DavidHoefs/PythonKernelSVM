@@ -3,12 +3,11 @@
 # Pattern Recognition Spring 2021
 # Environment: Visual Studio Code with Python 3.9.0
 # BEFORE RUNNING CHANGE FILE PATH ON LINE 29 TO POINT TO FILE ON YOUR SYSTEM!!!!
+# You may need to pip install seaborn and pip install pylab to run the code
 # =============================== References ===============================
 # https://cvxopt.org/examples/tutorial/qp.html - Documentation on cvxopt python package
 # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contour.html - matplotlib contour plot documentation
 
-
-from types import LambdaType
 import numpy as np
 from numpy import linalg
 import cvxopt
