@@ -1,4 +1,4 @@
-# AUTHOR: David Hoefs R#11481012
+# AUTHOR: David Hoefs 
 # Extra Credit Assignment
 # Pattern Recognition Spring 2021
 # Environment: Visual Studio Code with Python 3.9.0
@@ -26,7 +26,7 @@ def gaussianKernelFunction(x, y, sigma):
 # Read data from excel dataset and split into X and y 
 # returns X,y containing data
 def getData():
-    df = pd.read_excel("C:\\Users\\hoefs\\PatternRecognition\\ExtraCreditv2\\ExtraCreditDataset.xlsx",sheet_name='Sheet1' ,engine='openpyxl',header = None)
+    df = pd.read_excel("[path_to_dataset]",sheet_name='Sheet1' ,engine='openpyxl',header = None)
     numArray = df.to_numpy()
     X = numArray[0:,0:2]
     y = numArray[:, 2]
